@@ -16,12 +16,12 @@ This repository contains the end-to-end implementation, exploratory analysis, pr
 1. **Track 1: Flight Price Prediction (Supervised Regression)**
    - **Task:** Predict airline ticket prices (`price` in INR) from itinerary, scheduling, airline, and route metadata.
    - **Key Innovations:** Hierarchical median duration recovery; flight-prefix carrier mappings; out-of-fold target encoding across 11 categorical dimensions; market segmentation (Economy vs. Business); comparable itinerary fare statistical features; multi-stage Ridge residual correction; and geometric/arithmetic model ensembling.
-   - **Top Result:** **Public Kaggle Leaderboard $R^2 = \mathbf{0.96181}$** (Geometric Ensemble of Ridge LR + Random Forest + Extra Trees).
+   - **Top Result:** **Public Kaggle Leaderboard R² = 0.96181** (Geometric Ensemble of Ridge LR + Random Forest + Extra Trees).
 
 2. **Track 2: VehicleVision Classification (Supervised 3-Class Multiclass Classification)**
    - **Task:** Classify vehicles into **Sedan (`0`)**, **SUV (`1`)**, or **Sports Car (`2`)** using 20 continuous engineering and aerodynamic specifications.
    - **Key Innovations:** Rigorous data hygiene removing 2,500 duplicate records; leakage-proof `StratifiedGroupKFold` validation; 17 physics-derived domain features (powertrain, geometry, aerodynamics, energy/handling); and comparative benchmarking of regularized Logistic Regression vs. 1,600-tree hybrid ensembles vs. soft-voting classifiers.
-   - **Top Result:** **Validation Accuracy = $\mathbf{88.35\%}$** (Standalone regularized Logistic Regression) and **$87.73\%$** on strict deduplicated grouped validation.
+   - **Top Result:** **Validation Accuracy = 88.35%** (Standalone regularized Logistic Regression) and **87.73%** on strict deduplicated grouped validation.
 
 ---
 
@@ -69,7 +69,7 @@ project1/
 | **Data Preprocessing** | **2 Marks** | • Flight prefix carrier mapping to recover missing airlines.<br>• Hierarchical median imputation for duration.<br>• Cross-fitted target encoding for 11 categories.<br>• Derived booking windows & relative duration metrics. | • Identification & removal of 2,500 duplicate records.<br>• Conversion of infinite values to NaN with median imputation.<br>• Standard scaling in unified pipeline (`make_pipeline`).<br>• Prevention of train-val leakage via grouped split. |
 | **Variety of Models Tried** | **3 Marks** | • Ridge Regression with pairwise interactions.<br>• Market-segmented models (Economy vs. Business).<br>• Multi-stage Ridge residual error correction.<br>• Random Forest (180 trees, depth 25).<br>• Extra Trees (180 trees, depth 25).<br>• NNLS Stacking, Geometric & Arithmetic Ensembles. | • L2-Regularized Logistic Regression (`lbfgs`).<br>• Bagged Decision Trees (Gini & Entropy splits).<br>• Random Forest (500 trees).<br>• Extra Trees (500 trees).<br>• 1,600-tree + LR probability hybrid.<br>• Soft-voting ensemble (`VotingClassifier`). |
 | **Viva + Technical Report** | **5 Marks** | Full documentation in [Report_Flight_Price_Prediction.pdf](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/Report_Flight_Price_Prediction.pdf): mathematical formulations, error analyses, validation trade-offs, and design choices. | Full documentation in [Report_VehicleVision_Classification.pdf](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/Report_VehicleVision_Classification.pdf): physics-based feature derivations, leakage analysis, and linear vs. tree separability. |
-| **Leaderboard Performance** | **5 Marks** | **Public Kaggle Leaderboard $R^2 = \mathbf{0.96181}$** achieved by the 50/50 Geometric Ensemble (`submission_ensemble_simple.csv`). | Robust validation accuracy of **$88.35\%$** (raw stratified) and **$87.73\%$** (deduplicated grouped), with class F1 up to **0.92**. |
+| **Leaderboard Performance** | **5 Marks** | **Public Kaggle Leaderboard R² = 0.96181** achieved by the 50/50 Geometric Ensemble (`submission_ensemble_simple.csv`). | Robust validation accuracy of **88.35%** (raw stratified) and **87.73%** (deduplicated grouped), with class F1 up to **0.92**. |
 | **Total** | **15 Marks** | Full pipeline verified, reproducible, and documented. | Full pipeline verified, reproducible, and documented. |
 
 ---
@@ -81,7 +81,7 @@ The objective is supervised regression: predict airline ticket pricing in Indian
 
 - **Training Records:** 15,589 rows × 12 columns
 - **Test Records:** 3,898 rows × 11 columns (target `price` held out)
-- **Primary Metrics:** Coefficient of Determination ($R^2$), Root Mean Squared Error (RMSE), and Mean Absolute Error (MAE).
+- **Primary Metrics:** Coefficient of Determination (R²), Root Mean Squared Error (RMSE), and Mean Absolute Error (MAE).
 
 ### Feature Dictionary
 | Feature | Type | Description | Observed Domain Range / Cardinality |
@@ -104,7 +104,7 @@ The objective is supervised regression: predict airline ticket pricing in Indian
 ## 2. Exploratory Data Analysis & Strategic Observations
 1. **Pervasive Missing Values:** Approximately 20% of `airline` and `duration` values are missing. Deleting rows would sacrifice over 39% of the training dataset. We resolved this through deterministic carrier mapping from flight prefixes and hierarchical route medians.
 2. **Cabin-Class Bimodality:** Business class tickets occupy a completely distinct pricing distribution (typically ₹40,000 - ₹100,000+) compared to Economy class (₹2,500 - ₹15,000), necessitating segmented modeling or logarithmic transformation.
-3. **Nonlinear Booking Dynamics:** Ticket prices exhibit non-linear acceleration within the final 2–5 days before departure, requiring dedicated urgency indicators and reciprocal transforms ($1 / \text{days\_left}$).
+3. **Nonlinear Booking Dynamics:** Ticket prices exhibit non-linear acceleration within the final 2–5 days before departure, requiring dedicated urgency indicators and reciprocal transforms (`1 / days_left`).
 4. **Duration as an Itinerary Signature:** Duration strongly correlates with specific routes and stop counts, allowing precise imputation using grouped medians.
 
 ---
@@ -112,25 +112,29 @@ The objective is supervised regression: predict airline ticket pricing in Indian
 ## 3. Data Preprocessing & Feature Engineering
 
 ### 3.1 Tree Models Pipeline (32 Engineered Features in [flight_dt.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/flight_dt.ipynb))
-- **Carrier Recovery:** Extracted airline prefix from `flight` (e.g., `IX` $\to$ Air India Express / Wayfarer Aviation).
+- **Carrier Recovery:** Extracted airline prefix from `flight` (e.g., `IX` → Air India Express / Wayfarer Aviation).
 - **Hierarchical Duration Imputation:**
-  $$\text{Imputed Duration} = \text{Median}(\text{flight, route}) \to \text{Median}(\text{flight}) \to \text{Median}(\text{route, stops}) \to \text{Global Median}$$
+  ```
+  Imputed Duration: Median(flight, route) → Median(flight) → Median(route, stops) → Global Median
+  ```
 - **Cross-Fitted Target Encoding:** Target-encoded 11 high-cardinality categorical features using 5-fold internal out-of-fold cross-fitting with smoothing to eliminate data leakage.
-- **Booking Horizon Proxies:** Engineered $\log(\text{days\_left})$, $1/\text{days\_left}$, and binary thresholds for urgency: $\mathbb{I}(\text{days\_left} \le 2)$, $\mathbb{I}(\text{days\_left} \le 5)$, and $\mathbb{I}(\text{days\_left} \ge 25)$.
+- **Booking Horizon Proxies:** Engineered `log(days_left)`, `1 / days_left`, and binary thresholds for urgency: `days_left <= 2`, `days_left <= 5`, and `days_left >= 25`.
 - **Route Efficiency & Relative Duration:**
-  - $\text{Excess Duration} = \text{duration} - \min_{\text{route}}(\text{duration})$
-  - $\text{Duration Ratio} = \frac{\text{duration}}{\min_{\text{route}}(\text{duration}) + 10^{-5}}$
-  - $\text{Duration Per Stop} = \frac{\text{duration}}{\text{stops\_count} + 1}$
+  - `Excess Duration = duration - min(route_duration)`
+  - `Duration Ratio = duration / (min(route_duration) + 1e-5)`
+  - `Duration Per Stop = duration / (stops + 1)`
 - **Frequency Encoding:** Frequency counts of flight code, carrier, route, and carrier-route pairs.
-- **Logarithmic Target Scaling:** Models trained on $y = \log(1 + \text{price})$ to stabilize variance and minimize relative percentage error.
+- **Logarithmic Target Scaling:** Models trained on `y = log(1 + price)` to stabilize variance and minimize relative percentage error.
 
 ### 3.2 Linear Regression Pipeline (Segmented & Residual-Corrected in [flight_lr.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/flight_lr.ipynb))
 - **Market Segmentation:** Data split into independent sub-models for Economy vs. Business (subdivided by carrier families 6E/AI/IX vs. premium carriers).
 - **Itinerary Peer Statistics:** Extracted historical training fare aggregates (median, 25th percentile, minimum, mean) grouped by identical itinerary matching (`flight`, `route`, `stops`), backing off hierarchically to route-level aggregates.
 - **Pairwise Feature Interactions & Scaling:** One-hot encoding of categorical dimensions + `StandardScaler` + second-order interaction terms fitted with penalized L2 Ridge regression.
-- **Multi-Stage Residual Ridge Corrections:** Fitted auxiliary Ridge models sequentially to the residuals $\epsilon = y - \hat{y}$ using flight codes and progressively granular route-cabin-horizon keys.
+- **Multi-Stage Residual Ridge Corrections:** Fitted auxiliary Ridge models sequentially to the residuals (`residuals = y - y_pred`) using flight codes and progressively granular route-cabin-horizon keys.
 - **Nearby-Day Kernel Smoothing:** Comparable fares smoothed using an exponential decay kernel over booking horizon:
-  $$w_i = \exp\left(-\frac{|\text{days\_left}_i - \text{days\_left}_{\text{target}}|}{5}\right)$$
+  ```
+  Weight = exp(-|days_left - target_days_left| / 5)
+  ```
 - **Non-Negative Least Squares (NNLS) Stacking:** Combined segment models and nearby-day estimators under non-negativity constraints.
 
 ---
@@ -140,21 +144,21 @@ The objective is supervised regression: predict airline ticket pricing in Indian
 ### 4.1 Comparative Model Performance (Flight Track)
 All models were evaluated using standardized validation protocols: 5-fold Out-of-Fold (OOF) cross-validation for tree models, and an independent 3,118-row evaluation holdout for ensembling in [flight_ensemble.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/flight_ensemble.ipynb).
 
-| Model / Pipeline | Validation Protocol | RMSE (INR) ↓ | MAE (INR) ↓ | Validation $R^2$ ↑ | Public Leaderboard $R^2$ |
+| Model / Pipeline | Validation Protocol | RMSE (INR) ↓ | MAE (INR) ↓ | Validation R² ↑ | Public Leaderboard R² |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Geometric 50/50 Ensemble (LR × [RF + ET])** | **Ensemble Eval (3,118 rows)** | **9,537.66** | **3,203.79** | **0.9354** | **0.96181 (Best)** |
 | Arithmetic 50/50 Blend (LR + [RF + ET]) | Ensemble Eval (3,118 rows) | 9,532.92 | 3,207.82 | 0.9355 | — |
 | Weighted Average (31.3% LR + 68.7% Trees) | Ensemble Eval (3,118 rows) | 9,608.19 | 3,159.49 | 0.9345 | — |
 | NNLS Stacking (Segmented) | Ensemble Eval (3,118 rows) | 9,639.09 | 3,116.08 | 0.9341 | — |
 | Segment-Weighted Blend | Ensemble Eval (3,118 rows) | 9,640.60 | 3,169.40 | 0.9340 | — |
-| Ridge Stacking ($\alpha = 10$) | Ensemble Eval (3,118 rows) | 9,644.42 | 3,182.16 | 0.9340 | — |
+| Ridge Stacking (`alpha = 10`) | Ensemble Eval (3,118 rows) | 9,644.42 | 3,182.16 | 0.9340 | — |
 | Main Segmented Ridge LR Pipeline | Ensemble Eval (3,118 rows) | 9,682.56 | 3,447.28 | 0.9335 | — |
 | Tree Pipeline: RF + ET Blend | Ensemble Eval (3,118 rows) | 9,888.58 | 3,175.73 | 0.9306 | — |
 | *Extra Trees Regressor (180 trees)* | *5-Fold OOF* | *10,329.75* | *3,141.54* | *0.9303* | — |
 | *Random Forest Regressor (180 trees)* | *5-Fold OOF* | *10,425.36* | *3,207.66* | *0.9290* | — |
 | *Decision Tree Blend (RF + ET)* | *5-Fold OOF* | *10,312.52* | *3,154.79* | *0.9305* | — |
 
-> **Key Insight:** While the simple arithmetic blend edged out the geometric blend by ₹4.73 RMSE on the local holdout, the **Geometric Average** ($\hat{y} = \sqrt{\hat{y}_{\text{LR}} \cdot \hat{y}_{\text{Trees}}}$) generalized significantly better across extreme price ranges, resulting in the winning **$R^2 = \mathbf{0.96181}$** on the Kaggle public test set.
+> **Key Insight:** While the simple arithmetic blend edged out the geometric blend by ₹4.73 RMSE on the local holdout, the **Geometric Average** (`sqrt(price_LR * price_Trees)`) generalized significantly better across extreme price ranges, resulting in the winning **R² = 0.96181** on the Kaggle public test set.
 
 ---
 
@@ -185,34 +189,38 @@ The objective is supervised multiclass classification: classify a vehicle into o
 ## 3. Domain Feature Engineering (17 Derived Features)
 Implemented in `create_super_features()` within [vehicle_dt.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/vehicle_dt.ipynb), expanding feature dimensionality from 20 to 37 predictors:
 
-| Category | Derived Feature | Mathematical Formulation | Domain Justification |
+| Category | Derived Feature | Implementation Formula | Domain Justification |
 | :--- | :--- | :--- | :--- |
-| **Powertrain Ratios** | `power_to_weight` | $\text{horsepower} / \text{weight}$ | Primary discriminator for Sports Cars |
-| | `torque_to_weight` | $\text{torque} / \text{weight}$ | High low-end pull distinguishing SUVs/Sports Cars |
-| | `battery_to_weight` | $\text{battery\_kwh} / \text{weight}$ | Hybrid/EV powertrain packaging |
-| | `battery_to_accel` | $\text{battery\_kwh} / (\text{accel} + 10^{-5})$ | Instantaneous electrical acceleration capability |
-| | `power_per_cyl` | $\text{horsepower} / (\text{cylinders} + 10^{-5})$ | Specific engine output efficiency |
-| | `torque_per_disp` | $\text{torque} / (\text{displacement} + 10^{-5})$ | Volumetric forced-induction proxy |
-| **Geometry & Chassis**| `volume_est` | $(\text{length} \times \text{width} \times \text{height}) \times 10^{-9}$ | Total vehicle bounding box envelope ($m^3$) |
-| | `density_est` | $\text{weight} / (\text{volume\_est} + 10^{-5})$ | Material density and structural compactness |
-| | `wheelbase_to_length`| $\text{wheelbase} / \text{length}$ | Cabin space proportion vs. overhangs |
-| | `length_to_width` | $\text{length} / \text{width}$ | Aspect ratio of chassis |
-| **Aerodynamics** | `frontal_area` | $(\text{width} \times \text{height}) \times 10^{-6}$ | Frontal silhouette area ($m^2$) |
-| | `drag_area` | $\text{frontal\_area} \times C_d$ | Total effective aerodynamic resistance |
-| **Handling & Energy** | `kinetic_energy` | $\frac{1}{2} \cdot \text{weight} \cdot (100 / 3.6)^2$ | Kinetic energy at highway speed (100 km/h) |
-| | `braking_force` | $\text{kinetic\_energy} / (\text{braking\_dist} + 10^{-5})$ | Braking dissipation force demand |
-| | `avg_fuel_efficiency`| $\frac{1}{2}(\text{city\_eff} + \text{highway\_eff})$ | Combined cycle fuel efficiency |
-| | `fuel_tank_to_weight`| $\text{fuel\_tank} / \text{weight}$ | Endurance / utility packaging index |
-| | `low_slung_ratio` | $\text{ground\_clearance} / \text{height}$ | Center-of-gravity proxy separating SUVs from Sedans |
+| **Powertrain Ratios** | `power_to_weight` | `horsepower / weight` | Primary discriminator for Sports Cars |
+| | `torque_to_weight` | `torque / weight` | High low-end pull distinguishing SUVs/Sports Cars |
+| | `battery_to_weight` | `battery_capacity / weight` | Hybrid/EV powertrain packaging |
+| | `battery_to_accel` | `battery_capacity / (acceleration + 1e-5)` | Instantaneous electrical acceleration capability |
+| | `power_per_cyl` | `horsepower / (cylinders + 1e-5)` | Specific engine output efficiency |
+| | `torque_per_disp` | `torque / (displacement + 1e-5)` | Volumetric forced-induction proxy |
+| **Geometry & Chassis**| `volume_est` | `(length * width * height) * 1e-9` | Total vehicle bounding box envelope (m³) |
+| | `density_est` | `weight / (volume_est + 1e-5)` | Material density and structural compactness |
+| | `wheelbase_to_length`| `wheelbase / length` | Cabin space proportion vs. overhangs |
+| | `length_to_width` | `length / width` | Aspect ratio of chassis |
+| **Aerodynamics** | `frontal_area` | `(width * height) * 1e-6` | Frontal silhouette area (m²) |
+| | `drag_area` | `frontal_area * drag_coefficient` | Total effective aerodynamic resistance |
+| **Handling & Energy** | `kinetic_energy` | `0.5 * weight * (100 / 3.6)^2` | Kinetic energy at highway speed (100 km/h) |
+| | `braking_force` | `kinetic_energy / (braking_distance + 1e-5)` | Braking dissipation force demand |
+| | `avg_fuel_efficiency`| `0.5 * (city_efficiency + highway_efficiency)` | Combined cycle fuel efficiency |
+| | `fuel_tank_to_weight`| `fuel_tank_capacity / weight` | Endurance / utility packaging index |
+| | `low_slung_ratio` | `ground_clearance / vehicle_height` | Center-of-gravity proxy separating SUVs from Sedans |
 
 ---
 
 ## 4. Model Architectures & Validation Results
 
 ### 4.1 Evaluated Architectures
-1. **Standalone Logistic Regression ([vehicle_logistic.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/vehicle_logistic.ipynb)):** Median imputation + `StandardScaler` + multinomial Logistic Regression ($C=1.0$, `solver="lbfgs"`, `max_iter=3000`). Evaluated via 80/20 stratified split.
+1. **Standalone Logistic Regression ([vehicle_logistic.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/vehicle_logistic.ipynb)):** Median imputation + `StandardScaler` + multinomial Logistic Regression (`C=1.0`, `solver="lbfgs"`, `max_iter=3000`). Evaluated via 80/20 stratified split.
 2. **Engineered Tree Hybrid ([vehicle_dt.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/vehicle_dt.ipynb)):** 5-model ensemble on 37 features (300 Gini Bagged Trees, 300 Entropy Bagged Trees, 500 Random Forest, 500 Extra Trees, plus scaled Logistic Regression — total 1,600 trees). Blended probability output:
-   $$P_{\text{tree}} = \frac{1}{4}(P_{\text{gini}} + P_{\text{entropy}} + P_{\text{RF}} + P_{\text{ET}}), \quad P_{\text{hybrid}} = 0.40 \cdot P_{\text{tree}} + 0.60 \cdot P_{\text{LR}}$$
+   ```python
+   P_tree = (P_gini + P_entropy + P_rf + P_et) / 4
+   P_hybrid = 0.40 * P_tree + 0.60 * P_lr
+   prediction = argmax(P_hybrid)
+   ```
 3. **Cleaned Grouped Soft Voting ([vehicle_ensemble.ipynb](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/vehicle_ensemble.ipynb)):** Pipeline trained on 7,500 deduplicated records evaluated on 1,500 grouped validation rows. Soft voting combines 95% Logistic Regression + 5% Bagged Trees (80 estimators).
 
 ### 4.2 Comparative Performance Table (Vehicle Track)
@@ -225,7 +233,7 @@ Implemented in `create_super_features()` within [vehicle_dt.ipynb](file:///c:/Us
 | 37-Feature 1,600-Tree Hybrid + LR | Full-Fit Test Inference (10,000 rows fit) | *Priors: 33.3% each* | — | — | — | [`submission_hybrid_super_blend.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/data/submission_hybrid_super_blend.csv) |
 
 ### 4.3 Detailed Classification Report (Grouped Cleaned Split)
-$$\text{Macro Average F1} = \mathbf{0.88}, \quad \text{Weighted Average F1} = \mathbf{0.88}$$
+**Macro Average F1:** 0.88 &nbsp;|&nbsp; **Weighted Average F1:** 0.88
 
 | Class Index & Name | Precision | Recall | F1-Score | Support (Validation Rows) |
 | :--- | :---: | :---: | :---: | :---: |
@@ -235,7 +243,7 @@ $$\text{Macro Average F1} = \mathbf{0.88}, \quad \text{Weighted Average F1} = \m
 | **Total / Overall** | **0.88** | **0.88** | **0.88** | **1,500** |
 
 ### 4.4 Diagnostic Insights & Viva Defense
-- **High Linear Separability:** Continuous physical variables (ground clearance, power-to-weight, vehicle height) define smooth decision planes in $\mathbb{R}^{20}$. Consequently, L2-regularized Logistic Regression generalizes slightly better than non-linear tree ensembles, which tend to create step-like overfitted boundaries in sparse regions.
+- **High Linear Separability:** Continuous physical variables (ground clearance, power-to-weight, vehicle height) define smooth decision planes across the 20-dimensional feature space. Consequently, L2-regularized Logistic Regression generalizes slightly better than non-linear tree ensembles, which tend to create step-like overfitted boundaries in sparse regions.
 - **Sports Car Classification:** Achieves highest precision (**0.93**), driven by extreme low-slung ratios, elevated horsepower-to-weight, and minimal ground clearance.
 - **SUV Classification:** Achieves highest recall (**0.91**), separated reliably by cargo volume, frontal drag area, and elevated chassis height.
 - **Sedans as Intermediate Manifold:** Sedans occupy the intermediate boundary region between compact low-slung sports models and high-riding SUVs, accounting for slightly lower F1 (0.83).
@@ -246,10 +254,10 @@ $$\text{Macro Average F1} = \mathbf{0.88}, \quad \text{Weighted Average F1} = \m
 
 | Track | Submission File Name | Model Description | Record Count | Checks & Verifications |
 | :--- | :--- | :--- | :---: | :--- |
-| **Flight** | [`submission_ensemble_simple.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/data/submission_ensemble_simple.csv) | **Geometric 50/50 Blend:** $\sqrt{\hat{y}_{\text{LR}} \cdot \hat{y}_{\text{Trees}}}$ | 3,898 | Validated: Zero NaNs, strictly positive prices, sorted test IDs, **Public $R^2 = \mathbf{0.96181}$** |
+| **Flight** | [`submission_ensemble_simple.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/data/submission_ensemble_simple.csv) | **Geometric 50/50 Blend:** `sqrt(price_LR * price_Trees)` | 3,898 | Validated: Zero NaNs, strictly positive prices, sorted test IDs, **Public R² = 0.96181** |
 | **Flight** | [`submission_dt_simple.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/flight/data/submission_dt_simple.csv) | Equal blend of 5-fold RF (180 trees) + ET (180 trees) | 3,898 | Validated: Positive log-inverted outputs, bounds clipped |
 | **Vehicle** | [`submission_hybrid_super_blend.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/data/submission_hybrid_super_blend.csv) | 37-feature hybrid: 4 tree ensembles (1,600 trees) + LR | 2,500 | Validated: Exactly balanced test predictions (~33.3% per class) |
-| **Vehicle** | [`submission_simple_lr_bagging.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/data/submission_simple_lr_bagging.csv) | Deduplicated 95% LR + 5% Bagged Trees soft vote | 2,500 | Fully asserted: ID order preserved, class range $\in \{0, 1, 2\}$ |
+| **Vehicle** | [`submission_simple_lr_bagging.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/data/submission_simple_lr_bagging.csv) | Deduplicated 95% LR + 5% Bagged Trees soft vote | 2,500 | Fully asserted: ID order preserved, valid class range `{0, 1, 2}` |
 | **Vehicle** | [`vehicle_submission.csv`](file:///c:/Users/shubh/Downloads/iiitb/academics/ml/project1/vehicle/data/vehicle_submission.csv) | Standalone L2-regularized Logistic Regression pipeline | 2,500 | Validated: 88.35% validation pipeline refitted on all records |
 
 ---
@@ -292,7 +300,7 @@ This project was developed and submitted by:
 - **Anjali Kiran**
 - **Priti Aher**
 
-*M.Tech in Computer Science and Engineering / Data Science, International Institute of Information Technology, Bangalore (IIIT-B).*
+*M.Tech in Computer Science and Engineering, International Institute of Information Technology, Bangalore (IIIT-B).*
 
 ---
 
